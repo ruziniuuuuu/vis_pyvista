@@ -25,19 +25,19 @@ python src/utils/vis_save.py # the scene construction can be found in self_test
 IP=<IP address> PORT=<port number> REMOTE_USER=<remote server's username> KEY=<path to ssh key> REMOTE_PATH=<directory vis's path on remote server> LOCAL_PATH=./tmp/vis python src/utils/vis_pyvista.py
 ```
 
-vis_save的各种元素的可视化都是返回一个list，这些list相加起来可以组合出复杂的场景，最后保存的是由每一时刻的list组成的list，现在保存会得到一个文件夹，这个文件夹里面会有scene.json和一堆mesh，同样的mesh只会保存一次
+The visualization of various elements in vis_save returns a list. These lists can be combined to create complex scenes, and the final saved result is a list of lists, each representing a moment in time. Currently, saving will result in a folder containing scene.json and a bunch of meshes, with the same mesh being saved only once.
 
-vis_save可以在远程服务器上运行，在文件夹保存后可以在本地运行vis_pyvista，通过环境变量设置完远程服务器的路径（详见src/utils/download.py）后就会自动下载远程服务器的内容，之后可以使用鼠标自由调整视角，并且可以滑动右上角的进度条来切换显示的时间步（为了减小运算量，不同时间步同样的mesh和robot可以在vis_save的保存过程中设置同样的name）
+vis_save can run on a remote server. After saving the folder, you can run vis_pyvista locally. By setting the remote server's path through environment variables (see src/utils/download.py), the content from the remote server will be automatically downloaded. You can then freely adjust the view with the mouse and use the progress bar in the upper right corner to switch between time steps. To reduce computation, the same mesh and robot at different time steps can be set with the same name during the vis_save saving process.
 
-此外还有一些键盘快捷键，包括
+Additionally, there are some keyboard shortcuts, including:
 
-（数字）r：重新下载并读取
-（数字）o：重新读取
-（数字）d：重新下载
-（数字）s：保存当前scene到其他目录
-j，k：分别为下一帧与前一帧
-空格：开始/暂停播放
-z：重置时间为0
-q：清除数字buffer
+- (number) r: re-download and read
+- (number) o: re-read
+- (number) d: re-download
+- (number) s: save the current scene to another directory
+- j, k: next frame and previous frame, respectively
+- space: start/pause playback
+- z: reset time to 0
+- q: clear the number buffer
 
-其中（数字）代表可以在输入对应指令前输入场景编号，这个数字可以指定下载/读取/保存的位置，不设定数字则默认为当前的场景编号（初始化为0）
+The (number) represents the scene number that can be input before the corresponding command. This number can specify the download/read/save location. If no number is set, the current scene number is used (initialized to 0).
