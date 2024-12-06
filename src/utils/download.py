@@ -4,16 +4,13 @@ import sys
 os.chdir(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(os.path.realpath('.'))
 
-import paramiko
-from scp import SCPClient
-from paramiko import SSHClient, AutoAddPolicy, RSAKey
 import subprocess
 from tqdm import tqdm
 
 from src.utils.utils import rm_r
 
 def download_with_rsync(host=None, port=None, username=None, private_key_path=None, remote_dir=None, local_dir=None):
-    os.makedirs(os.path.dirname(local_dir), exist_ok=True)
+    os.makedirs(local_dir, exist_ok=True)
     host = os.environ.get("IP") if host is None else host
     port = os.environ.get("PORT") if port is None else port
     username = os.environ.get("REMOTE_USER") if username is None else username

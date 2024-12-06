@@ -235,8 +235,10 @@ class Vis:
     @staticmethod
     def self_test():
         from pytorch3d import transforms as pttf
+        # each element in all_vis represents one timestep of the scene
         all_vis = []
-        all_vis.append(Vis.sphere(trans=np.random.randn(3)/10, opacity=0.9))
+        # one timestep can have multiple objects, we can add the lists of objects together
+        all_vis.append(Vis.sphere(trans=np.random.randn(3)/10, opacity=0.9) + Vis.box(trans=np.random.randn(3)/10, rot=pttf.random_rotation(), scale=np.random.rand(3)/10+0.001, opacity=0.9))
         all_vis.append(Vis.box(trans=np.random.randn(3)/10, rot=pttf.random_rotation(), scale=np.random.rand(3)/10+0.001, opacity=0.9))
         all_vis.append(Vis.pose(trans=np.random.randn(3)/10, rot=pttf.random_rotation()))
         all_vis.append(Vis.plane(torch.cat([pttf.random_rotation()[0], torch.randn(1,)/10]), opacity=0.9))
