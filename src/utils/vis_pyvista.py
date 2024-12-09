@@ -132,6 +132,8 @@ class Vis:
             self.robots[urdf] = PinRobotModel(urdf)
         poses = self.robots[urdf].forward_kinematics(qpos, mesh_type)
         for mesh_id, (mesh, (mesh_trans, mesh_rot)) in enumerate(zip(self.robots[urdf].meshes[mesh_type], poses)):
+            if not hasattr(mesh, 'vertices'):
+                mesh = mesh.to_mesh()
             vertices, faces = mesh.vertices, mesh.faces
             self.mesh(vertices=vertices, faces=faces, trans=rot@mesh_trans+trans, rot=rot@mesh_rot, opacity=opacity, color=color, name=f'{name}_mesh_id{mesh_id}', idx=idx)
 
@@ -228,7 +230,7 @@ class Vis:
                 if o['type'] == 'line':
                     self.line(p1=o['p1'], p2=o['p2'], width=o['width'], color=o['color'], name=o['name'], idx=idx)
                 if o['type'] == 'mesh':
-                    self.mesh(path=os.path.join(path, o['path']), scale=o['scale'], trans=o['pos'], rot=quat2mat(o['quat']), opacity=o['opacity'], color=o['color'], vertices=o['vertices'], faces=o['faces'], name=o['name'], idx=idx)
+                    self.mesh(path=os.path.join(path, o['path']) if o['path'] is not None else None, scale=o['scale'], trans=o['pos'], rot=quat2mat(o['quat']), opacity=o['opacity'], color=o['color'], vertices=o['vertices'], faces=o['faces'], name=o['name'], idx=idx)
         return
 
     def show(self):
@@ -258,6 +260,8 @@ class Vis:
                 interaction_event="always",
             )
             self.scene_has_shown = True
+            self.plotter.show_grid(fmt='%.2e')
+
         if not self.has_shown:
             self.plotter.add_key_event('r', self.reload_elements)
             self.plotter.add_key_event('o', self.load_elements)
@@ -271,7 +275,7 @@ class Vis:
             for i in range(10):  # Loop through '0' to '9'
                 key = str(i)  # Convert the number to string (e.g., '0', '1', ..., '9')
                 self.plotter.add_key_event(key, lambda c=key: self.add_buffer(c))
-            self.plotter.enable_terrain_style()
+            self.plotter.enable_terrain_style(mouse_wheel_zooms=True)
             self.has_shown = True
             self.plotter.show()
         else:
