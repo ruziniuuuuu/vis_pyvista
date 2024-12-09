@@ -16,6 +16,7 @@ import json
 from transforms3d.quaternions import quat2mat, mat2quat
 
 from src.utils.utils import to_numpy, to_torch, to_number, rm_r, safe_copy, serialize_item, gen_uuid
+from src.utils.pin_model import PinRobotModel
 
 class Vis:
     def __init__(self, *args, **kwargs):
@@ -134,6 +135,7 @@ class Vis:
               color: Optional[str] = None,
               mesh_type: str = 'collision',
               name: str = None,
+              unpack: bool = False,
     ) -> list:
         trans = np.zeros((3,)) if trans is None else to_numpy(trans).reshape(3)
         rot = np.eye(3) if rot is None else to_numpy(rot).reshape(3, 3)
@@ -145,16 +147,28 @@ class Vis:
         pose[:3, 3] = trans
         name = gen_uuid() if name is None else name
 
-        return [dict(type='robot',
-                     urdf=urdf,
-                     color=color,
-                     opacity=opacity,
-                     qpos=qpos,
-                     pos=trans,
-                     quat=mat2quat(rot),
-                     pose=pose,
-                     mesh_type=mesh_type,
-                     name=name)]
+        if unpack:
+            pin_model = PinRobotModel(urdf)
+            poses = pin_model.forward_kinematics(qpos, mesh_type)
+            lst = []
+            for mesh_id, ((mesh_type, mesh_param), (mesh_trans, mesh_rot)) in enumerate(zip(pin_model.meshes[mesh_type], poses)):
+                if mesh_type == 'sphere':
+                    lst += Vis.sphere(trans=rot@mesh_trans+trans, radius=mesh_param['radius'], opacity=opacity, color=color, name=f'{name}_sphere_id{mesh_id}')
+                elif mesh_type == 'mesh':
+                    vertices, faces = mesh_param.vertices, mesh_param.faces
+                    lst += Vis.mesh(vertices=vertices, faces=faces, trans=rot@mesh_trans+trans, rot=rot@mesh_rot, opacity=opacity, color=color, name=f'{name}_mesh_id{mesh_id}')
+            return lst
+        else:
+            return [dict(type='robot',
+                        urdf=urdf,
+                        color=color,
+                        opacity=opacity,
+                        qpos=qpos,
+                        pos=trans,
+                        quat=mat2quat(rot),
+                        pose=pose,
+                        mesh_type=mesh_type,
+                        name=name)]
     
     @staticmethod
     def pc(pc: Union[np.ndarray, torch.tensor], # (n, 3)

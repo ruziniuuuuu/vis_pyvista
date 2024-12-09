@@ -23,7 +23,13 @@ class PinRobotModel:
         self.meshes = dict(collision=[], visual=[])
         for mode, model in [('collision', self.collision_model), ('visual', self.visual_model)]:
             for obj in model.geometryObjects:
-                self.meshes[mode].append(tm.load_mesh(obj.meshPath))
+                if obj.meshPath == 'SPHERE':
+                    self.meshes[mode].append(('sphere', dict(radius=obj.geometry.radius)))
+                else:
+                    mesh = tm.load_mesh(obj.meshPath)
+                    if not hasattr(mesh, 'vertices'):
+                        mesh = mesh.to_mesh()
+                    self.meshes[mode].append(('mesh', mesh))
 
     def forward_kinematics(self, q: np.ndarray, mode: str):
         pinocchio.forwardKinematics(self.model, self.data, q)

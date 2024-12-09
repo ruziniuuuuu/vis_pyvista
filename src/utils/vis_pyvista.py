@@ -131,11 +131,12 @@ class Vis:
         if urdf not in self.robots:
             self.robots[urdf] = PinRobotModel(urdf)
         poses = self.robots[urdf].forward_kinematics(qpos, mesh_type)
-        for mesh_id, (mesh, (mesh_trans, mesh_rot)) in enumerate(zip(self.robots[urdf].meshes[mesh_type], poses)):
-            if not hasattr(mesh, 'vertices'):
-                mesh = mesh.to_mesh()
-            vertices, faces = mesh.vertices, mesh.faces
-            self.mesh(vertices=vertices, faces=faces, trans=rot@mesh_trans+trans, rot=rot@mesh_rot, opacity=opacity, color=color, name=f'{name}_mesh_id{mesh_id}', idx=idx)
+        for mesh_id, ((mesh_type, mesh_param), (mesh_trans, mesh_rot)) in enumerate(zip(self.robots[urdf].meshes[mesh_type], poses)):
+            if mesh_type == 'sphere':
+                self.sphere(trans=rot@mesh_trans+trans, radius=mesh_param['radius'], opacity=opacity, color=color, name=f'{name}_sphere_id{mesh_id}', idx=idx)
+            elif mesh_type == 'mesh':
+                vertices, faces = mesh_param.vertices, mesh_param.faces
+                self.mesh(vertices=vertices, faces=faces, trans=rot@mesh_trans+trans, rot=rot@mesh_rot, opacity=opacity, color=color, name=f'{name}_mesh_id{mesh_id}', idx=idx)
 
     def pc(self,
                   pc: Union[np.ndarray, torch.tensor], # (n, 3)
