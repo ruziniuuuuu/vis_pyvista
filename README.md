@@ -27,7 +27,7 @@ IP=<IP address> PORT=<port number> REMOTE_USER=<remote server's username> KEY=<p
 
 The visualization of various elements in vis_save returns a list. These lists can be combined to create complex scenes, and the final saved result is a list of lists, each representing a moment in time. Currently, saving will result in a folder containing scene.json and a bunch of meshes, with the same mesh being saved only once.
 
-vis_save can run on a remote server. After saving the folder, you can run vis_pyvista locally. By setting the remote server's path through environment variables (see src/utils/download.py), the content from the remote server will be automatically downloaded. You can then freely adjust the view with the mouse and use the progress bar in the upper right corner to switch between time steps. To reduce computation, the same mesh and robot at different time steps can be set with the same name during the vis_save saving process.
+vis_save can run on a remote server. After saving the folder, you can run vis_pyvista locally. By setting the remote server's path through environment variables (see src/utils/download.py), the content from the remote server will be automatically downloaded. You can then freely adjust the view with the mouse and use the progress bar in the upper right corner to switch between time steps. 
 
 Additionally, there are some keyboard shortcuts, including:
 

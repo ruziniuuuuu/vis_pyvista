@@ -29,7 +29,7 @@ class PinRobotModel:
                     mesh = tm.load_mesh(obj.meshPath)
                     if not hasattr(mesh, 'vertices'):
                         mesh = mesh.to_mesh()
-                    self.meshes[mode].append(('mesh', mesh))
+                    self.meshes[mode].append(('mesh', (obj.meshPath, mesh)))
 
     def forward_kinematics(self, q: np.ndarray, mode: str):
         pinocchio.forwardKinematics(self.model, self.data, q)
@@ -47,3 +47,7 @@ class PinRobotModel:
         else:
             raise ValueError(f'mode must be visual/collision. current mode: {mode}')
         return [(oMg.translation, oMg.rotation) for oMg in d.oMg]
+    
+    def generate_random_qpos(self):
+        return pinocchio.randomConfiguration(self.model)
+ 

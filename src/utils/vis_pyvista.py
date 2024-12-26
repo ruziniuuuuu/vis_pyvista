@@ -17,9 +17,22 @@ from time import sleep
 from transforms3d.quaternions import quat2mat, mat2quat
 import plotly.express as px
 
-from src.utils.utils import to_numpy, to_torch, to_number, rm_r, safe_copy, serialize_item
+from src.utils.utils import to_numpy, to_torch, to_number, rm_r, safe_copy, serialize_item, get_vertices_faces
 from src.utils.pin_model import PinRobotModel
 from src.utils.download import download_with_rsync
+
+def compute_hash(identify):
+    parts_hash = []
+    for p in identify:
+        if isinstance(p, torch.Tensor):
+            p = p.cpu().numpy()
+        if isinstance(p, list):
+            p = np.array(p)
+        if isinstance(p, np.ndarray):
+            parts_hash.append(hash(str(hash(p.tobytes())) + str(hash(str(p.shape)))))
+        else:
+            parts_hash.append(hash(p))
+    return hash(','.join([str(hash(p)) for p in parts_hash]))
 
 class Vis:
     def __init__(self, path):
@@ -33,7 +46,25 @@ class Vis:
         self.running = False
         self.path = path
         self.cur_scene = '0'
-
+    
+    @staticmethod
+    def lazy_param_read(param):
+        if 'mesh_path' in param:
+            vertices, faces = get_vertices_faces(param['mesh_path'])
+            param.pop('mesh_path')
+            faces = [[len(f)] + f for f in faces.tolist()]
+            param['mesh'] = pv.PolyData(vertices, faces)
+        return param
+    
+    def update_element(self, identify, param, idx, mesh_pose):
+        hash_id = compute_hash(identify)
+        for ele in self.elements.get(hash_id, []):
+            if not idx in ele['idx']:
+                ele['idx'].append(idx)
+                ele['mesh_pose'][idx] = mesh_pose
+                return
+        self.elements[hash_id] = self.elements.get(hash_id, []) + [dict(param=self.lazy_param_read(param), idx=[idx], mesh_pose={idx: mesh_pose})]
+    
     def sphere(self,
                trans: Optional[Union[np.ndarray, torch.tensor]] = None,
                radius: float = None,
@@ -47,8 +78,10 @@ class Vis:
         trans = np.zeros(3) if trans is None else to_numpy(trans)
         radius = 0.1 if radius is None else to_number(radius)
 
-        sphere = pv.Sphere(radius=radius, center=trans)
-        self.elements[f'{name}_t{idx}'] = dict(param={'mesh': sphere, 'color': color, 'opacity': opacity}, idx=[idx], mesh_pose=None)
+        mesh_pose = np.eye(4)
+        mesh_pose[:3, 3] = trans
+        sphere = pv.Sphere(radius=radius, center=np.zeros(3))
+        self.update_element(identify=['sphere', color, opacity, radius], param={'mesh': sphere, 'color': color, 'opacity': opacity}, idx=idx, mesh_pose=mesh_pose)
         return
     
     @staticmethod
@@ -70,9 +103,9 @@ class Vis:
         trans = np.zeros(3) if trans is None else to_numpy(trans)
         rot = np.eye(3) if rot is None else to_numpy(rot)
 
+        mesh_pose = np.block([[rot, trans[:, None]], [np.zeros(3), 1]])
         box = pv.Cube(center=np.zeros(3), x_length=scale[0], y_length=scale[1], z_length=scale[2])
-        box.transform(np.block([[rot, trans[:, None]], [np.zeros(3), 1]]))
-        self.elements[f'{name}_t{idx}'] = dict(param={'mesh': box, 'color': color, 'opacity': opacity}, idx=[idx], mesh_pose=None)
+        self.update_element(identify=['box', color, opacity, scale], param={'mesh': box, 'color': color, 'opacity': opacity}, idx=idx, mesh_pose=mesh_pose)
         return
     
     def pose(self,  
@@ -85,12 +118,13 @@ class Vis:
     ):
         trans = to_numpy(trans)
         rot = to_numpy(rot)
-        arrow_x = pv.Arrow(start=trans, direction=rot[:, 0], tip_length=length, scale=width)
-        arrow_y = pv.Arrow(start=trans, direction=rot[:, 1], tip_length=length, scale=width)
-        arrow_z = pv.Arrow(start=trans, direction=rot[:, 2], tip_length=length, scale=width)
-        self.elements[f'{name}_t{idx}x'] = dict(param={'mesh': arrow_x, 'color': 'red', 'opacity': 1.0}, idx=[idx], mesh_pose=None)
-        self.elements[f'{name}_t{idx}y'] = dict(param={'mesh': arrow_y, 'color': 'green', 'opacity': 1.0}, idx=[idx], mesh_pose=None)
-        self.elements[f'{name}_t{idx}z'] = dict(param={'mesh': arrow_z, 'color': 'blue', 'opacity': 1.0}, idx=[idx], mesh_pose=None)
+        arrow_x = pv.Arrow(start=np.zeros(3), direction=np.array([1, 0, 0]), tip_length=length, scale=width)
+        arrow_y = pv.Arrow(start=np.zeros(3), direction=np.array([0, 1, 0]), tip_length=length, scale=width)
+        arrow_z = pv.Arrow(start=np.zeros(3), direction=np.array([0, 0, 1]), tip_length=length, scale=width)
+        mesh_pose = np.block([[rot, trans[:, None]], [np.zeros(3), 1]])
+        self.update_element(identify=['arrow_x', 'red', length, width, 1.0], param={'mesh': arrow_x, 'color': 'red', 'opacity': 1.0}, idx=idx, mesh_pose=mesh_pose)
+        self.update_element(identify=['arrow_y', 'green', length, width, 1.0], param={'mesh': arrow_y, 'color': 'green', 'opacity': 1.0}, idx=idx, mesh_pose=mesh_pose)
+        self.update_element(identify=['arrow_z', 'blue', length, width, 1.0], param={'mesh': arrow_z, 'color': 'blue', 'opacity': 1.0}, idx=idx, mesh_pose=mesh_pose)
         return
    
     def plane(self,
@@ -106,7 +140,7 @@ class Vis:
         dir = plane_vec[:3]
         assert (torch.linalg.norm(dir) - 1).abs() < 1e-4
         plane = pv.Plane(direction=plane_vec[:3], center=plane_vec[:3] * plane_vec[3])
-        self.elements[f'{name}_t{idx}'] = dict(param={'mesh': plane, 'color': color, 'opacity': opacity}, idx=[idx], mesh_pose=None)
+        self.update_element(identify=['plane', color, opacity, plane_vec], param={'mesh': plane, 'color': color, 'opacity': opacity}, idx=idx, mesh_pose=np.eye(4))
 
     def robot(self,
               urdf: str,
@@ -135,8 +169,8 @@ class Vis:
             if mesh_type == 'sphere':
                 self.sphere(trans=rot@mesh_trans+trans, radius=mesh_param['radius'], opacity=opacity, color=color, name=f'{name}_sphere_id{mesh_id}', idx=idx)
             elif mesh_type == 'mesh':
-                vertices, faces = mesh_param.vertices, mesh_param.faces
-                self.mesh(vertices=vertices, faces=faces, trans=rot@mesh_trans+trans, rot=rot@mesh_rot, opacity=opacity, color=color, name=f'{name}_mesh_id{mesh_id}', idx=idx)
+                # vertices, faces = mesh_param.vertices, mesh_param.faces
+                self.mesh(path=mesh_param[0], trans=rot@mesh_trans+trans, rot=rot@mesh_rot, opacity=opacity, color=color, name=f'{name}_mesh_id{mesh_id}', idx=idx)
 
     def pc(self,
                   pc: Union[np.ndarray, torch.tensor], # (n, 3)
@@ -150,19 +184,21 @@ class Vis:
         pc = to_numpy(pc)
         cloud = pv.PolyData(pc)
         pc_name = f'{name}_t{idx}'
-        self.elements[pc_name] = dict(param={'mesh': cloud}, idx=[idx], mesh_pose=None)
+        param = {'mesh': cloud}
+        # self.elements[pc_name] = dict(param={'mesh': cloud}, idx=[idx], mesh_pose=None)
         if not value is None:
-            self.elements[pc_name]['param']['scalars'] = to_numpy(value)
-            self.elements[pc_name]['param']['show_scalar_bar'] = False
+            param['scalars'] = to_numpy(value)
+            param['show_scalar_bar'] = False
         if not isinstance(color, str):
             color = to_numpy(color)
             if color.shape[-1] == 3:
                 color = np.concatenate([color, np.ones((len(color), 1))], axis=-1)
-            self.elements[pc_name]['param']['scalars'] = color
-            self.elements[pc_name]['param']['rgba'] = True
+            param['scalars'] = color
+            param['rgba'] = True
         else:
-            self.elements[pc_name]['param']['color'] = color
-            self.elements[pc_name]['param']['opacity'] = 1.0
+            param['color'] = color
+            param['opacity'] = 1.0
+        self.update_element(identify=['pc', color, value, size, color_map], param=param, idx=idx, mesh_pose=np.eye(4))
         return
     
     def line(self,
@@ -178,7 +214,7 @@ class Vis:
 
         p1, p2 = to_numpy(p1), to_numpy(p2)
         line = pv.Line(pointa=p1, pointb=p2)
-        self.elements[f'{name}_t{idx}'] = dict(param={'mesh': line, 'color': color, 'line_width': width}, idx=[idx], mesh_pose=None)
+        self.update_element(identify=['line', p1, p2, color, width], param={'mesh': line, 'color': color, 'line_width': width}, idx=idx, mesh_pose=np.eye(4))
     
     def mesh(self,
                     path: str = None,
@@ -197,19 +233,14 @@ class Vis:
         pose = np.eye(4)
         pose[:3, :3] = rot
         pose[:3, 3] = trans
-        elem_name = f'{name}_t'
-        if elem_name in self.elements:
-            self.elements[elem_name]['idx'].append(idx)
-            self.elements[elem_name]['mesh_pose'][idx] = pose
-        else:
-            if path is not None:
-                mesh = tm.load_mesh(path)
-                vertices, faces = mesh.vertices, mesh.faces
+        if path is None:
             vertices = to_numpy(vertices)
             faces = to_numpy(faces)
             faces = [[len(f)] + f for f in faces.tolist()]
             mesh = pv.PolyData(vertices, faces)
-            self.elements[elem_name] = dict(param={'mesh': mesh, 'color': color, 'opacity': opacity}, idx=[idx], mesh_pose={idx: pose})
+            self.update_element(identify=['mesh_array', color, opacity, vertices, faces], param={'mesh': mesh, 'color': color, 'opacity': opacity}, idx=idx, mesh_pose=pose)
+        else:
+            self.update_element(identify=['mesh_path', color, opacity, path], param={'mesh_path': path, 'color': color, 'opacity': opacity}, idx=idx, mesh_pose=pose)
     
     def read(self, path: str):
         scenes = json.load(open(os.path.join(path, 'scene.json'), 'r'))
@@ -236,16 +267,18 @@ class Vis:
 
     def show(self):
         if self.last_t != self.t:
-            for k, v in self.elements.items():
-                if self.t in v['idx']:
-                    if not k in self.actors:
-                        self.actors[k] = self.plotter.add_mesh(**v['param'])
-                    else:
-                        self.actors[k].visibility = True
-                    if not v['mesh_pose'] is None:
-                        self.actors[k].user_matrix = v['mesh_pose'][self.t]
-                elif k in self.actors:
-                    self.actors[k].visibility = False
+            for k, vv in self.elements.items():
+                for act_id, v in enumerate(vv):
+                    act_name = f'{k}_{act_id}'
+                    if self.t in v['idx']:
+                        if not act_name in self.actors:
+                            self.actors[act_name] = self.plotter.add_mesh(**v['param'])
+                        else:
+                            self.actors[act_name].visibility = True
+                        if not v['mesh_pose'] is None:
+                            self.actors[act_name].user_matrix = v['mesh_pose'][self.t]
+                    elif act_name in self.actors:
+                        self.actors[act_name].visibility = False
         self.last_t = self.t
         if not self.scene_has_shown:
             self.slider = self.plotter.add_slider_widget(

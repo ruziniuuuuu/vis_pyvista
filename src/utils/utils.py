@@ -13,6 +13,7 @@ from scipy.spatial import cKDTree
 from transforms3d.quaternions import quat2mat, mat2quat
 import shutil
 import filecmp
+import trimesh as tm
 # from src.utils.vis_plotly import Vis
 
 def to_list(x: Union[torch.Tensor, np.ndarray, list], spec='cpu') -> list:
@@ -217,3 +218,16 @@ def serialize_item(item):
     elif isinstance(item, dict):  # Handle dictionaries
         return {k: serialize_item(v) for k, v in item.items()}
     return item  # Return other types as-is
+
+def get_vertices_faces(file_name):
+    mesh = tm.load(file_name)
+    if not hasattr(mesh, 'vertices'):
+        mesh = mesh.to_mesh()
+    return mesh.vertices, mesh.faces
+
+def save_obj_file(v, f, file_name=None):
+    if file_name is None:
+        file_name = f'tmp/mesh/{gen_uuid()}.obj'
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    tm.Trimesh(vertices=v, faces=f).export(file_name)
+    return file_name
