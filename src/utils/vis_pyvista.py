@@ -198,7 +198,7 @@ class Vis:
         else:
             param['color'] = color
             param['opacity'] = 1.0
-        self.update_element(identify=['pc', color, value, size, color_map], param=param, idx=idx, mesh_pose=np.eye(4))
+        self.update_element(identify=['pc', pc, color, value, size, color_map], param=param, idx=idx, mesh_pose=np.eye(4))
         return
     
     def line(self,
@@ -397,6 +397,9 @@ class Vis:
         self.has_shown = False
         self.reload_elements()
 
+    def load_show(self):
+        self.has_shown = False
+        self.load_elements()
 
 if __name__ == '__main__':
     vis = Vis('tmp/vis')
