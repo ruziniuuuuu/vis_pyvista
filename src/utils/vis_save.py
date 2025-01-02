@@ -155,7 +155,7 @@ class Vis:
                 if mesh_type == 'sphere':
                     lst += Vis.sphere(trans=rot@mesh_trans+trans, radius=mesh_param['radius'], opacity=opacity, color=color, name=f'{name}_sphere_id{mesh_id}')
                 elif mesh_type == 'mesh':
-                    vertices, faces = mesh_param.vertices, mesh_param.faces
+                    vertices, faces = mesh_param[1].vertices, mesh_param[1].faces
                     lst += Vis.mesh(vertices=vertices, faces=faces, trans=rot@mesh_trans+trans, rot=rot@mesh_rot, opacity=opacity, color=color, name=f'{name}_mesh_id{mesh_id}')
             return lst
         else:

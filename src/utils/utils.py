@@ -49,7 +49,7 @@ def to_numpy(x: Union[torch.Tensor, np.ndarray, list]) -> np.ndarray:
 def to_number(x: Union[torch.Tensor, np.ndarray, float, int]) -> float:
     if isinstance(x, (torch.Tensor, np.ndarray)):
         return x.item()
-    return x
+    return float(x)
 
 def torch_dict_to_device(dic, device):
     return {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in dic.items()}
@@ -231,3 +231,9 @@ def save_obj_file(v, f, file_name=None):
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     tm.Trimesh(vertices=v, faces=f).export(file_name)
     return file_name
+
+def set_minus(a, b):
+    return [x for x in a if x not in b]
+
+def angle_to_rot33(angle: float) -> np.ndarray: # (3, 3)
+    return np.array([[np.cos(angle), -np.sin(angle), 0], [np.sin(angle), np.cos(angle), 0], [0, 0, 1]])

@@ -266,6 +266,8 @@ class Vis:
         return
 
     def show(self):
+        if not self.scene_has_shown and self.has_shown:
+            self.plotter.suppress_rendering =True  # Enable rendering
         if self.last_t != self.t:
             for k, vv in self.elements.items():
                 for act_id, v in enumerate(vv):
@@ -295,6 +297,7 @@ class Vis:
             )
             self.scene_has_shown = True
             self.plotter.show_grid(fmt='%.2e')
+            self.plotter.suppress_rendering = False  # Enable rendering
 
         if not self.has_shown:
             self.plotter.add_key_event('r', self.reload_elements)
@@ -328,12 +331,14 @@ class Vis:
         if self.running:
             self.running = False
         else:
+            if self.t == self.T - 1:
+                self.t = 0
             self.running = True
             for t in range(self.t, self.T):
                 if not self.running:
                     break
-                self.update_visualization(t)
                 sleep(0.05)
+                self.update_visualization(t)
 
     def update_visualization(self, t):
         if self.has_shown:
@@ -384,8 +389,10 @@ class Vis:
         self.reset_buffer()
         self.t = 0
         self.last_t = -1
+        self.plotter.suppress_rendering = True  # Disable rendering
         for v in self.actors.values():
             self.plotter.remove_actor(v)
+        self.plotter.suppress_rendering = False  # Enable rendering
         self.elements = dict()
         self.actors = dict()
         self.running = False
