@@ -7,6 +7,7 @@ from src.utils.utils import to_torch
 
 class PinRobotModel:
     def __init__(self, urdf_path):
+        self.urdf_path = urdf_path
         self.model, self.collision_model, self.visual_model = pinocchio.buildModelsFromUrdf(
             urdf_path, dirname(urdf_path)
         )
@@ -18,6 +19,8 @@ class PinRobotModel:
 
         self.setup_mesh()
         self.joint_names = [n for n in self.model.names[1:]]
+        self.joint_lower_limits = self.model.lowerPositionLimit
+        self.joint_upper_limits = self.model.upperPositionLimit
 
     def setup_mesh(self):
         self.meshes = dict(collision=[], visual=[])
@@ -44,6 +47,8 @@ class PinRobotModel:
         elif mode == 'collision':
             pinocchio.updateGeometryPlacements(self.model, self.data, self.collision_model, self.collision_data)
             d = self.collision_data
+        elif mode == 'jacobian':
+            return {self.model.frames[i].name: pinocchio.computeFrameJacobian(self.model, self.data, q, i) for i in range(len(self.model.frames))}
         else:
             raise ValueError(f'mode must be visual/collision. current mode: {mode}')
         return [(oMg.translation, oMg.rotation) for oMg in d.oMg]

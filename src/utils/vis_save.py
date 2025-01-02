@@ -62,6 +62,45 @@ class Vis:
                      name=name)]
     
     @staticmethod
+    def ellipsoid(trans: Optional[Union[np.ndarray, torch.tensor]] = None,
+            rot: Optional[Union[np.ndarray, torch.tensor]] = None,
+            axis: Optional[Union[np.ndarray, torch.tensor]] = None,
+            subdivisions: int = 4,
+            opacity: float = None,
+            color: str = None,
+            name: str = None,
+    ) -> list:
+        color = 'green' if color is None else color
+        opacity = 1.0 if opacity is None else opacity
+        trans = np.zeros(3) if trans is None else to_numpy(trans)
+        rot = np.eye(3) if rot is None else to_numpy(rot)
+        axis = np.array([1, 1, 1]) if axis is None else to_numpy(axis)
+        name = gen_uuid() if name is None else name
+
+        sphere = tm.creation.icosphere(subdivisions=subdivisions, radius=1.0)
+
+        # Apply scaling along each axis to transform the sphere into an ellipsoid
+        scaling_matrix = np.diag([axis[0], axis[1], axis[2], 1])
+        sphere.apply_transform(scaling_matrix)
+        v, f = sphere.vertices, sphere.faces
+        pose = np.eye(4)
+        pose[:3, :3] = rot
+        pose[:3, 3] = trans
+
+        return [dict(type='mesh',
+                     path=None,
+                     urdf=None,
+                     scale=1.0,
+                     pos=trans,
+                     quat=mat2quat(rot),
+                     opacity=opacity,
+                     color=color,
+                     vertices=v,
+                     faces=f,
+                     pose=pose,
+                     name=name)]
+
+    @staticmethod
     def rand_color():
         return random.choice(px.colors.sequential.Plasma)
     

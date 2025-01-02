@@ -267,7 +267,8 @@ class Vis:
 
     def show(self):
         if not self.scene_has_shown and self.has_shown:
-            self.plotter.suppress_rendering =True  # Enable rendering
+            self.plotter.suppress_rendering = True  # Enable rendering
+            cam_pose = self.plotter.camera_position
         if self.last_t != self.t:
             for k, vv in self.elements.items():
                 for act_id, v in enumerate(vv):
@@ -297,6 +298,8 @@ class Vis:
             )
             self.scene_has_shown = True
             self.plotter.show_grid(fmt='%.2e')
+            if self.has_shown:
+                self.plotter.camera_position = cam_pose
             self.plotter.suppress_rendering = False  # Enable rendering
 
         if not self.has_shown:
@@ -389,9 +392,12 @@ class Vis:
         self.reset_buffer()
         self.t = 0
         self.last_t = -1
+        cam_pose = self.plotter.camera_position
         self.plotter.suppress_rendering = True  # Disable rendering
         for v in self.actors.values():
             self.plotter.remove_actor(v)
+        if self.has_shown:
+            self.plotter.camera_position = cam_pose
         self.plotter.suppress_rendering = False  # Enable rendering
         self.elements = dict()
         self.actors = dict()
