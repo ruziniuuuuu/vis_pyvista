@@ -261,8 +261,9 @@ def serialize_item(item):
     return item  # Return other types as-is
 
 
-def get_vertices_faces(file_name):
-    mesh = tm.load(file_name)
+def get_vertices_faces(file_name=None, mesh=None):
+    if mesh is None:
+        mesh = tm.load(file_name)
     if not hasattr(mesh, "vertices"):
         mesh = mesh.to_mesh()
     return mesh.vertices, mesh.faces
@@ -288,3 +289,9 @@ def angle_to_rot33(angle: float) -> np.ndarray:  # (3, 3)
             [0, 0, 1],
         ]
     )
+
+def trans_rot_to_4x4mat(trans: np.ndarray, rot: np.ndarray) -> np.ndarray:  # (4, 4)
+    res = np.eye(4)
+    res[:3, :3] = rot
+    res[:3, 3] = trans
+    return res

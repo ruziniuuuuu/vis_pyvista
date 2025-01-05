@@ -230,7 +230,7 @@ class Vis:
 
         if urdf not in self.robots:
             self.robots[urdf] = PinRobotModel(urdf)
-        poses = self.robots[urdf].forward_kinematics(qpos, mesh_type)
+        poses = self.robots[urdf].fk_mesh(qpos, mode=mesh_type)
         for mesh_id, ((mesh_type, mesh_param), (mesh_trans, mesh_rot)) in enumerate(
             zip(self.robots[urdf].meshes[mesh_type], poses)
         ):
@@ -246,7 +246,7 @@ class Vis:
             elif mesh_type == "mesh":
                 # vertices, faces = mesh_param.vertices, mesh_param.faces
                 self.mesh(
-                    path=mesh_param[0],
+                    path=mesh_param['path'],
                     trans=rot @ mesh_trans + trans,
                     rot=rot @ mesh_rot,
                     opacity=opacity,

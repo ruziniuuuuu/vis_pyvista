@@ -212,7 +212,7 @@ class Vis:
 
         if unpack:
             pin_model = PinRobotModel(urdf)
-            poses = pin_model.forward_kinematics(qpos, mesh_type)
+            poses = pin_model.fk_mesh(qpos, mode=mesh_type)
             lst = []
             for mesh_id, ((mesh_type, mesh_param), (mesh_trans, mesh_rot)) in enumerate(
                 zip(pin_model.meshes[mesh_type], poses)
@@ -226,7 +226,7 @@ class Vis:
                         name=f"{name}_sphere_id{mesh_id}",
                     )
                 elif mesh_type == "mesh":
-                    vertices, faces = mesh_param[1].vertices, mesh_param[1].faces
+                    vertices, faces = mesh_param['mesh'].vertices, mesh_param['mesh'].faces
                     lst += Vis.mesh(
                         vertices=vertices,
                         faces=faces,
