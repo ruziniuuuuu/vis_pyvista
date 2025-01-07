@@ -15,8 +15,6 @@ import shutil
 import filecmp
 import trimesh as tm
 
-# from src.utils.vis_plotly import Vis
-
 
 def to_list(x: Union[torch.Tensor, np.ndarray, list], spec="cpu") -> list:
     if isinstance(x, torch.Tensor):
