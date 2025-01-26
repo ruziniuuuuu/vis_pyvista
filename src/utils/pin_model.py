@@ -107,11 +107,11 @@ class PinRobotModel:
             self.set_fk(q)
         pinocchio.updateFramePlacements(self.model, self.data)
         link_trans = {
-            self.get_frame_name(i): self.data.oMf[i].translation
+            self.get_frame_name(i): self.data.oMf[i].translation.copy()
             for i in range(len(self.model.frames))
         }
         link_rot = {
-            self.get_frame_name(i): self.data.oMf[i].rotation
+            self.get_frame_name(i): self.data.oMf[i].rotation.copy()
             for i in range(len(self.model.frames))
         }
         return link_trans, link_rot
@@ -126,8 +126,8 @@ class PinRobotModel:
         pinocchio.updateFramePlacements(self.model, self.data)
         frame = self.get_frame_id(link)
         return (
-            self.data.oMf[frame].translation,
-            self.data.oMf[frame].rotation,
+            self.data.oMf[frame].translation.copy(),
+            self.data.oMf[frame].rotation.copy(),
         )
 
     def fk_all_jacobian(
@@ -141,17 +141,23 @@ class PinRobotModel:
         return {
             self.get_frame_name(i): pinocchio.computeFrameJacobian(
                 self.model, self.data, q, i
-            )
+            ).copy()
             for i in range(len(self.model.frames))
         }
 
-    def fk_jacobian(self, q: np.ndarray, link: str, set_fk: bool = True) -> np.ndarray:
+    def fk_jacobian(self, q: np.ndarray, link: str, set_fk: bool = True, mode_str='local') -> np.ndarray:
         # q: joint angles (J,)
         # return link jacobian (6, J)
         if set_fk:
             self.set_fk(q)
         i = self.get_frame_id(link)
-        return pinocchio.computeFrameJacobian(self.model, self.data, q, i)
+        if mode_str == 'local':
+            mode = pinocchio.LOCAL
+        elif mode_str == 'world':
+            mode = pinocchio.WORLD
+        else:
+            mode = pinocchio.LOCAL_WORLD_ALIGNED
+        return pinocchio.computeFrameJacobian(self.model, self.data, q, i, mode).copy()
 
     def fk_mesh(
         self, q: np.ndarray, mode: str, set_fk: bool = True
@@ -172,7 +178,7 @@ class PinRobotModel:
             d = self.collision_data
         else:
             raise ValueError(f"mode must be visual/collision. current mode: {mode}")
-        return [(d.oMg[i].translation, d.oMg[i].rotation) for i in self.mesh_id[mode]]
+        return [(d.oMg[i].translation.copy(), d.oMg[i].rotation.copy()) for i in self.mesh_id[mode]]
 
     def fk_fps(self, q: np.ndarray, set_fk: bool = True) -> np.ndarray:
         # q: joint angles (J,)
@@ -200,7 +206,7 @@ class PinRobotModel:
         result = np.eye(4)
         result[:3, 3] = lt + lr @ self.camera_trans
         result[:3, :3] = lr @ self.camera_rot
-        # FIXME: temp
+        # TODO: temp
         result[:3, :3] = np.array(
             [
                 [0, -np.sqrt(2) / 2, np.sqrt(2) / 2],

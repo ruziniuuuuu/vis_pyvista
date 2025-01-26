@@ -6,14 +6,12 @@ sys.path.append(os.path.realpath("."))
 
 from typing import Optional, Union, Dict, List
 import trimesh as tm
-from tqdm import tqdm
 import numpy as np
 import torch
 import plotly.express as px
 import random
-import shutil
 import json
-from transforms3d.quaternions import quat2mat, mat2quat
+from transforms3d.quaternions import mat2quat
 
 from src.utils.utils import (
     to_numpy,
@@ -189,6 +187,51 @@ class Vis:
         ]
 
     @staticmethod
+    def gripper(
+        trans: Optional[Union[np.ndarray, torch.tensor]] = None,  # (3)
+        rot: Optional[Union[np.ndarray, torch.tensor]] = None,  # (3, 3)
+        width: Optional[float] = 0.0,
+        depth: Optional[float] = 0.04,
+        height: Optional[float] = 0.002,
+        finger_width: Optional[float] = 0.002,
+        tail_length: Optional[float] = 0.04,
+        depth_base: Optional[float] = 0.02,
+        opacity: Optional[float] = None,
+        color: Optional[str] = None,
+    ):
+            """
+            4 boxes: 
+                       2|------ 1
+                --------|  . O
+                    3   |------ 0
+
+                                        y
+                                        | 
+                                        O--x
+                                       /
+                                      z
+            """
+            trans = np.zeros((3,)) if trans is None else to_numpy(trans).reshape(3)
+            rot = np.eye(3) if rot is None else to_numpy(rot).reshape(3, 3)
+            color = "blue" if color is None else color
+            opacity = 1.0 if opacity is None else opacity
+            
+            centers = np.array([[(depth - finger_width - depth_base)/2, (width + finger_width)/2, 0],
+                                    [(depth - finger_width - depth_base)/2, -(width + finger_width)/2, 0],
+                                    [-depth_base-finger_width/2, 0, 0],
+                                    [-depth_base-finger_width-tail_length/2, 0, 0]])
+            scales = np.array([[finger_width+depth_base+depth, finger_width, height],
+                                   [finger_width+depth_base+depth, finger_width, height],
+                                   [finger_width, width, height],
+                                   [tail_length, finger_width, height]])
+            centers = np.einsum('ij,kj->ki', rot, centers) + trans
+            box_plotly_list = []
+            for i in range(4):
+                box_plotly_list += Vis.box(scales[i], centers[i], rot, opacity, color)
+            return box_plotly_list
+
+
+    @staticmethod
     def robot(
         urdf: str,
         qpos: Union[Union[np.ndarray, torch.tensor]],  # (n)
@@ -196,7 +239,7 @@ class Vis:
         rot: Optional[Union[np.ndarray, torch.tensor]] = None,  # (3, 3)
         opacity: Optional[float] = None,
         color: Optional[str] = None,
-        mesh_type: str = "collision",
+        mesh_type: str = "visual",
         name: str = None,
         unpack: bool = False,
     ) -> list:

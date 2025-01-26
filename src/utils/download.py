@@ -7,8 +7,6 @@ sys.path.append(os.path.realpath("."))
 import subprocess
 from tqdm import tqdm
 
-from src.utils.utils import rm_r
-
 
 def download_with_rsync(
     host=None,

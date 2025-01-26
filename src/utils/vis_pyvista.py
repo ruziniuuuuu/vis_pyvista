@@ -4,26 +4,21 @@ import sys
 os.chdir(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(os.path.realpath("."))
 
-from typing import Optional, Union, Dict, List
-import trimesh as tm
-from tqdm import tqdm
+import json
+from typing import Optional, Union
 import numpy as np
 import torch
 import pyvista as pv
 import random
-import shutil
-import json
 from time import sleep
-from transforms3d.quaternions import quat2mat, mat2quat
+from transforms3d.quaternions import quat2mat
 import plotly.express as px
 
 from src.utils.utils import (
     to_numpy,
     to_torch,
     to_number,
-    rm_r,
     safe_copy,
-    serialize_item,
     get_vertices_faces,
 )
 from src.utils.pin_model import PinRobotModel
@@ -63,7 +58,8 @@ class Vis:
             vertices, faces = get_vertices_faces(param["mesh_path"])
             param.pop("mesh_path")
             faces = [[len(f)] + f for f in faces.tolist()]
-            param["mesh"] = pv.PolyData(vertices, faces)
+            param["mesh"] = pv.PolyData(vertices * param["scale"], faces)
+            param.pop("scale")
         return param
 
     def update_element(self, identify, param, idx, mesh_pose):
@@ -330,7 +326,7 @@ class Vis:
         pose[:3, :3] = rot
         pose[:3, 3] = trans
         if path is None:
-            vertices = to_numpy(vertices)
+            vertices = to_numpy(vertices) * scale
             faces = to_numpy(faces)
             faces = [[len(f)] + f for f in faces.tolist()]
             mesh = pv.PolyData(vertices, faces)
@@ -342,8 +338,8 @@ class Vis:
             )
         else:
             self.update_element(
-                identify=["mesh_path", color, opacity, path],
-                param={"mesh_path": path, "color": color, "opacity": opacity},
+                identify=["mesh_path", color, opacity, path, scale],
+                param={"mesh_path": path, "color": color, "opacity": opacity, "scale": scale},
                 idx=idx,
                 mesh_pose=pose,
             )

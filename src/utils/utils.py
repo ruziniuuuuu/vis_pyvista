@@ -3,14 +3,10 @@ import os
 import torch
 import numpy as np
 import random
-from typing import Union, Optional
+from typing import Union
 from datetime import datetime
 import uuid
 from multiprocessing import Pool
-from pytorch3d import transforms as pttf
-import scipy.spatial.transform as sst
-from scipy.spatial import cKDTree
-from transforms3d.quaternions import quat2mat, mat2quat
 import shutil
 import filecmp
 import trimesh as tm
@@ -178,40 +174,40 @@ def pool_process(num, func, args):
     return results
 
 
-def matrix_to_axis_angle(rot: torch.Tensor):
-    aa = pttf.matrix_to_axis_angle(rot.reshape(-1, 3, 3))
-    aa_norm = aa.norm(dim=-1, keepdim=True)
-    aa = torch.where(aa_norm < np.pi, aa, aa / aa_norm * (aa_norm - 2 * np.pi))
-    return aa.reshape(*rot.shape[:-2], 3)
+# def matrix_to_axis_angle(rot: torch.Tensor):
+#     aa = pttf.matrix_to_axis_angle(rot.reshape(-1, 3, 3))
+#     aa_norm = aa.norm(dim=-1, keepdim=True)
+#     aa = torch.where(aa_norm < np.pi, aa, aa / aa_norm * (aa_norm - 2 * np.pi))
+#     return aa.reshape(*rot.shape[:-2], 3)
 
 
-def cdist_test(pc1, pc2, thresh, filter=True):
-    if filter:
-        pc1_min, pc1_max = pc1.min(dim=0).values, pc1.max(dim=0).values
-        for i in range(3):
-            pc2 = pc2[
-                (pc2[:, i] > pc1_min[i] - 1.2 * thresh)
-                & (pc2[:, i] < pc1_max[i] + 1.2 * thresh)
-            ]
-            if len(pc2) == 0:
-                return False
-        pc2_min, pc2_max = pc2.min(dim=0).values, pc2.max(dim=0).values
-        for i in range(3):
-            pc1 = pc1[
-                (pc1[:, i] > pc2_min[i] - 1.2 * thresh)
-                & (pc1[:, i] < pc2_max[i] + 1.2 * thresh)
-            ]
-            if len(pc1) == 0:
-                return False
-    # cdist = torch.cdist(pc1, pc2)
-    # return cdist.min() < thresh
-    if len(pc2) > len(pc1):
-        pc1, pc2 = pc2, pc1
-    tree = cKDTree(pc2)
-    distances, _ = tree.query(
-        pc1, k=1
-    )  # Find the nearest point in pc2 for each point in pc1
-    return np.min(distances) < thresh
+# def cdist_test(pc1, pc2, thresh, filter=True):
+#     if filter:
+#         pc1_min, pc1_max = pc1.min(dim=0).values, pc1.max(dim=0).values
+#         for i in range(3):
+#             pc2 = pc2[
+#                 (pc2[:, i] > pc1_min[i] - 1.2 * thresh)
+#                 & (pc2[:, i] < pc1_max[i] + 1.2 * thresh)
+#             ]
+#             if len(pc2) == 0:
+#                 return False
+#         pc2_min, pc2_max = pc2.min(dim=0).values, pc2.max(dim=0).values
+#         for i in range(3):
+#             pc1 = pc1[
+#                 (pc1[:, i] > pc2_min[i] - 1.2 * thresh)
+#                 & (pc1[:, i] < pc2_max[i] + 1.2 * thresh)
+#             ]
+#             if len(pc1) == 0:
+#                 return False
+#     # cdist = torch.cdist(pc1, pc2)
+#     # return cdist.min() < thresh
+#     if len(pc2) > len(pc1):
+#         pc1, pc2 = pc2, pc1
+#     tree = cKDTree(pc2)
+#     distances, _ = tree.query(
+#         pc1, k=1
+#     )  # Find the nearest point in pc2 for each point in pc1
+#     return np.min(distances) < thresh
 
 
 def rm_r(path):
@@ -288,8 +284,58 @@ def angle_to_rot33(angle: float) -> np.ndarray:  # (3, 3)
         ]
     )
 
+
 def trans_rot_to_4x4mat(trans: np.ndarray, rot: np.ndarray) -> np.ndarray:  # (4, 4)
     res = np.eye(4)
     res[:3, :3] = rot
     res[:3, 3] = trans
     return res
+
+
+# from pytorch3d
+def quaternion_to_matrix(quaternions: np.ndarray) -> np.ndarray:
+    """
+    Convert rotations given as quaternions to rotation matrices.
+
+    Args:
+        quaternions: quaternions with real part first,
+            as tensor of shape (..., 4).
+
+    Returns:
+        Rotation matrices as tensor of shape (..., 3, 3).
+    """
+    r, i, j, k = (
+        quaternions[..., 0],
+        quaternions[..., 1],
+        quaternions[..., 2],
+        quaternions[..., 3],
+    )
+    # pyre-fixme[58]: `/` is not supported for operand types `float` and `Tensor`.
+    two_s = 2.0 / (quaternions * quaternions).sum(axis=-1)
+
+    o = np.stack(
+        (
+            1 - two_s * (j * j + k * k),
+            two_s * (i * j - k * r),
+            two_s * (i * k + j * r),
+            two_s * (i * j + k * r),
+            1 - two_s * (i * i + k * k),
+            two_s * (j * k - i * r),
+            two_s * (i * k - j * r),
+            two_s * (j * k + i * r),
+            1 - two_s * (i * i + j * j),
+        ),
+        axis=-1,
+    )
+    return o.reshape(quaternions.shape[:-1] + (3, 3))
+
+
+def load_dataclass(cls, dict: dict):
+    return cls(**dict)
+
+def zfill(x: Union[int, str], length: int) -> str:
+    return str(x).zfill(length)
+
+def rotation_angle(rot1: np.ndarray, rot2: np.ndarray) -> float:
+    delta_rot = np.dot(rot1.T, rot2)
+    return np.arccos(np.clip((np.trace(delta_rot) - 1) / 2, -1, 1))
