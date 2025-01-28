@@ -8,4 +8,13 @@ setup(
     long_description=open("README.md").read(),
     packages=find_packages(),
     python_requires=">=3.9",
+    install_requires=[
+        "pyvista",
+        "numpy",
+        "torch",
+        "tqdm",
+        "pin",
+        "transforms3d",
+        "trimesh",  
+    ],
 )

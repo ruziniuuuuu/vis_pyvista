@@ -7,7 +7,6 @@ import pyvista as pv
 import random
 from time import sleep
 from transforms3d.quaternions import quat2mat
-import plotly.express as px
 
 from .utils import (
     to_numpy,
@@ -94,10 +93,6 @@ class Vis:
             mesh_pose=mesh_pose,
         )
         return
-
-    @staticmethod
-    def rand_color():
-        return random.choice(px.colors.sequential.Plasma)
 
     def box(
         self,
