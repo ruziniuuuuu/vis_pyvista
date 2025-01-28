@@ -387,7 +387,7 @@ class Vis:
                     )
                 if o["type"] == "robot":
                     self.robot(
-                        urdf=o["urdf"],
+                        os.path.join(path, o["urdf"]),
                         qpos=o["qpos"],
                         trans=o["pos"],
                         rot=quat2mat(o["quat"]),
