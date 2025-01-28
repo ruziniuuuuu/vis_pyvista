@@ -145,15 +145,17 @@ class PinRobotModel:
             for i in range(len(self.model.frames))
         }
 
-    def fk_jacobian(self, q: np.ndarray, link: str, set_fk: bool = True, mode_str='local') -> np.ndarray:
+    def fk_jacobian(
+        self, q: np.ndarray, link: str, set_fk: bool = True, mode_str="local"
+    ) -> np.ndarray:
         # q: joint angles (J,)
         # return link jacobian (6, J)
         if set_fk:
             self.set_fk(q)
         i = self.get_frame_id(link)
-        if mode_str == 'local':
+        if mode_str == "local":
             mode = pinocchio.LOCAL
-        elif mode_str == 'world':
+        elif mode_str == "world":
             mode = pinocchio.WORLD
         else:
             mode = pinocchio.LOCAL_WORLD_ALIGNED
@@ -178,7 +180,10 @@ class PinRobotModel:
             d = self.collision_data
         else:
             raise ValueError(f"mode must be visual/collision. current mode: {mode}")
-        return [(d.oMg[i].translation.copy(), d.oMg[i].rotation.copy()) for i in self.mesh_id[mode]]
+        return [
+            (d.oMg[i].translation.copy(), d.oMg[i].rotation.copy())
+            for i in self.mesh_id[mode]
+        ]
 
     def fk_fps(self, q: np.ndarray, set_fk: bool = True) -> np.ndarray:
         # q: joint angles (J,)

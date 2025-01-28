@@ -237,7 +237,7 @@ class Vis:
             elif mesh_type == "mesh":
                 # vertices, faces = mesh_param.vertices, mesh_param.faces
                 self.mesh(
-                    path=mesh_param['path'],
+                    path=mesh_param["path"],
                     trans=rot @ mesh_trans + trans,
                     rot=rot @ mesh_rot,
                     opacity=opacity,
@@ -334,7 +334,12 @@ class Vis:
         else:
             self.update_element(
                 identify=["mesh_path", color, opacity, path, scale],
-                param={"mesh_path": path, "color": color, "opacity": opacity, "scale": scale},
+                param={
+                    "mesh_path": path,
+                    "color": color,
+                    "opacity": opacity,
+                    "scale": scale,
+                },
                 idx=idx,
                 mesh_pose=pose,
             )

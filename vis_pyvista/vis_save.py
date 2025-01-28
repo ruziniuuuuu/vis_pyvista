@@ -3,8 +3,6 @@ from typing import Optional, Union, Dict, List
 import trimesh as tm
 import numpy as np
 import torch
-import plotly.express as px
-import random
 import json
 from transforms3d.quaternions import mat2quat
 
@@ -20,12 +18,18 @@ from .utils import (
 from .pin_model import PinRobotModel
 
 
+def convert_to_rel_path(path: str) -> str:
+    if path[0] != "/":
+        return path
+    return f"absolute_path{path}"
+
+
 class Vis:
     def __init__(self, *args, **kwargs):
         pass
 
     @staticmethod
-    def save(lst: Union[List[Dict], List[List[Dict]]], dir: str = "tmp/vis"):
+    def save(lst: Union[List[Dict], List[List[Dict]]], dir: str = "tmp/vis_0"):
         if isinstance(lst[0], dict):
             lst = [lst]
         # empty directory
@@ -33,12 +37,17 @@ class Vis:
         os.makedirs(dir, exist_ok=True)
         for lt in lst:
             for o in lt:
-                if o["type"] == "mesh":
-                    if not o["path"] is None:
-                        safe_copy(o["path"], os.path.join(dir, o["path"]))
-                    if not o["urdf"] is None:
-                        urdf_dir = os.path.dirname(o["urdf"])
-                        safe_copy(o["urdf"], os.path.join(dir, o["urdf"]))
+                if not o.get("path") is None:
+                    rel_save_path = convert_to_rel_path(o["path"])
+                    safe_copy(o["path"], os.path.join(dir, rel_save_path))
+                    o["path"] = rel_save_path
+                if not o.get("urdf") is None:
+                    urdf_dir = os.path.dirname(o["urdf"])
+                    rel_save_path = convert_to_rel_path(o["urdf"])
+                    safe_copy(
+                        urdf_dir, os.path.join(dir, os.path.dirname(rel_save_path))
+                    )
+                    o["urdf"] = rel_save_path
         with open(os.path.join(dir, "scene.json"), "w") as f:
             json.dump(serialize_item(lst), f, indent=4)
         print(f"Saved to {dir}")
@@ -113,10 +122,6 @@ class Vis:
         ]
 
     @staticmethod
-    def rand_color():
-        return random.choice(px.colors.sequential.Plasma)
-
-    @staticmethod
     def box(
         scale: Union[np.ndarray, torch.tensor],  # (3, )
         trans: Optional[Union[np.ndarray, torch.tensor]] = None,  # (3, )
@@ -186,45 +191,60 @@ class Vis:
         trans: Optional[Union[np.ndarray, torch.tensor]] = None,  # (3)
         rot: Optional[Union[np.ndarray, torch.tensor]] = None,  # (3, 3)
         width: Optional[float] = 0.0,
-        depth: Optional[float] = 0.04,
+        depth: Optional[float] = 0.0,
         height: Optional[float] = 0.002,
         finger_width: Optional[float] = 0.002,
         tail_length: Optional[float] = 0.04,
-        depth_base: Optional[float] = 0.02,
+        depth_base: Optional[float] = 0.06,
         opacity: Optional[float] = None,
         color: Optional[str] = None,
     ):
-            """
-            4 boxes: 
-                       2|------ 1
-                --------|  . O
-                    3   |------ 0
+        """
+        4 boxes:
+                   2|------ 1
+            --------|  . O
+                3   |------ 0
 
-                                        y
-                                        | 
-                                        O--x
-                                       /
-                                      z
-            """
-            trans = np.zeros((3,)) if trans is None else to_numpy(trans).reshape(3)
-            rot = np.eye(3) if rot is None else to_numpy(rot).reshape(3, 3)
-            color = "blue" if color is None else color
-            opacity = 1.0 if opacity is None else opacity
-            
-            centers = np.array([[(depth - finger_width - depth_base)/2, (width + finger_width)/2, 0],
-                                    [(depth - finger_width - depth_base)/2, -(width + finger_width)/2, 0],
-                                    [-depth_base-finger_width/2, 0, 0],
-                                    [-depth_base-finger_width-tail_length/2, 0, 0]])
-            scales = np.array([[finger_width+depth_base+depth, finger_width, height],
-                                   [finger_width+depth_base+depth, finger_width, height],
-                                   [finger_width, width, height],
-                                   [tail_length, finger_width, height]])
-            centers = np.einsum('ij,kj->ki', rot, centers) + trans
-            box_plotly_list = []
-            for i in range(4):
-                box_plotly_list += Vis.box(scales[i], centers[i], rot, opacity, color)
-            return box_plotly_list
+                                    y
+                                    |
+                                    O--x
+                                   /
+                                  z
+        """
+        trans = np.zeros((3,)) if trans is None else to_numpy(trans).reshape(3)
+        rot = np.eye(3) if rot is None else to_numpy(rot).reshape(3, 3)
+        color = "blue" if color is None else color
+        opacity = 1.0 if opacity is None else opacity
 
+        centers = np.array(
+            [
+                [
+                    (depth - finger_width - depth_base) / 2,
+                    (width + finger_width) / 2,
+                    0,
+                ],
+                [
+                    (depth - finger_width - depth_base) / 2,
+                    -(width + finger_width) / 2,
+                    0,
+                ],
+                [-depth_base - finger_width / 2, 0, 0],
+                [-depth_base - finger_width - tail_length / 2, 0, 0],
+            ]
+        )
+        scales = np.array(
+            [
+                [finger_width + depth_base + depth, finger_width, height],
+                [finger_width + depth_base + depth, finger_width, height],
+                [finger_width, width, height],
+                [tail_length, finger_width, height],
+            ]
+        )
+        centers = np.einsum("ij,kj->ki", rot, centers) + trans
+        box_plotly_list = []
+        for i in range(4):
+            box_plotly_list += Vis.box(scales[i], centers[i], rot, opacity, color)
+        return box_plotly_list
 
     @staticmethod
     def robot(
@@ -264,7 +284,10 @@ class Vis:
                         name=f"{name}_sphere_id{mesh_id}",
                     )
                 elif mesh_type == "mesh":
-                    vertices, faces = mesh_param['mesh'].vertices, mesh_param['mesh'].faces
+                    vertices, faces = (
+                        mesh_param["mesh"].vertices,
+                        mesh_param["mesh"].faces,
+                    )
                     lst += Vis.mesh(
                         vertices=vertices,
                         faces=faces,

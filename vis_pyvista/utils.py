@@ -333,8 +333,10 @@ def quaternion_to_matrix(quaternions: np.ndarray) -> np.ndarray:
 def load_dataclass(cls, dict: dict):
     return cls(**dict)
 
+
 def zfill(x: Union[int, str], length: int) -> str:
     return str(x).zfill(length)
+
 
 def rotation_angle(rot1: np.ndarray, rot2: np.ndarray) -> float:
     delta_rot = np.dot(rot1.T, rot2)
