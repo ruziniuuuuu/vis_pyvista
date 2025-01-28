@@ -1,9 +1,4 @@
 import os
-import sys
-
-os.chdir(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.append(os.path.realpath("."))
-
 import json
 from typing import Optional, Union
 import numpy as np
@@ -14,15 +9,15 @@ from time import sleep
 from transforms3d.quaternions import quat2mat
 import plotly.express as px
 
-from src.utils.utils import (
+from .utils import (
     to_numpy,
     to_torch,
     to_number,
     safe_copy,
     get_vertices_faces,
 )
-from src.utils.pin_model import PinRobotModel
-from src.utils.download import download_with_rsync
+from .pin_model import PinRobotModel
+from .download import download_with_rsync
 
 
 def compute_hash(identify):
@@ -387,7 +382,7 @@ class Vis:
                     )
                 if o["type"] == "robot":
                     self.robot(
-                        os.path.join(path, o["urdf"]),
+                        urdf=os.path.join(path, o["urdf"]),
                         qpos=o["qpos"],
                         trans=o["pos"],
                         rot=quat2mat(o["quat"]),

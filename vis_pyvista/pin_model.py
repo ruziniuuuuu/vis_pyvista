@@ -5,7 +5,7 @@ import trimesh as tm
 import pinocchio
 from typing import Dict, Tuple, List, Optional
 
-from src.utils.utils import to_torch
+from .utils import to_torch
 
 
 class PinRobotModel:

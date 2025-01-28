@@ -1,9 +1,4 @@
 import os
-import sys
-
-os.chdir(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.append(os.path.realpath("."))
-
 from typing import Optional, Union, Dict, List
 import trimesh as tm
 import numpy as np
@@ -13,7 +8,7 @@ import random
 import json
 from transforms3d.quaternions import mat2quat
 
-from src.utils.utils import (
+from .utils import (
     to_numpy,
     to_torch,
     to_number,
@@ -22,7 +17,7 @@ from src.utils.utils import (
     serialize_item,
     gen_uuid,
 )
-from src.utils.pin_model import PinRobotModel
+from .pin_model import PinRobotModel
 
 
 class Vis:
