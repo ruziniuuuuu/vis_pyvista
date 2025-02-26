@@ -261,6 +261,8 @@ class Vis:
             param["show_scalar_bar"] = False
         if not isinstance(color, str):
             color = to_numpy(color)
+            if len(color.shape) == 1:
+                color = color[None, :].repeat(len(pc), axis=0)
             if color.shape[-1] == 3:
                 color = np.concatenate([color, np.ones((len(color), 1))], axis=-1)
             param["scalars"] = color
@@ -462,7 +464,7 @@ class Vis:
                 interaction_event="always",
             )
             self.scene_has_shown = True
-            self.plotter.show_grid(fmt="%.2e")
+            self.plotter.show_grid(fmt="%.3f")
             if self.has_shown:
                 self.plotter.camera_position = cam_pose
             self.plotter.suppress_rendering = False  # Enable rendering
@@ -505,7 +507,7 @@ class Vis:
             for t in range(self.t, self.T):
                 if not self.running:
                     break
-                sleep(0.05)
+                sleep(0.025)
                 self.update_visualization(t)
 
     def update_visualization(self, t):
