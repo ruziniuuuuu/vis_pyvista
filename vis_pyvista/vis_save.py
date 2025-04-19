@@ -43,7 +43,7 @@ class Vis:
                     o["path"] = rel_save_path
                 if not o.get("urdf") is None:
                     urdf_dir = os.path.dirname(o["urdf"])
-                    rel_save_path = convert_to_rel_path(o["urdf"])
+                    rel_save_path = os.path.join(o['name'], os.path.basename(o["urdf"]))
                     safe_copy(
                         urdf_dir, os.path.join(dir, os.path.dirname(rel_save_path))
                     )

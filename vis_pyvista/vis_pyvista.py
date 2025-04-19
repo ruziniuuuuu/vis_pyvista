@@ -1,5 +1,6 @@
 import os
 import json
+import argparse
 from typing import Optional, Union
 import numpy as np
 import torch
@@ -583,5 +584,12 @@ class Vis:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="vis pyvista")
+    parser.add_argument('--remote', type=int, default=0)
+    args = parser.parse_args()
+
     vis = Vis("tmp/vis")
-    vis.read_show()
+    if args.remote:
+        vis.read_show()
+    else:
+        vis.load_show()
