@@ -1,0 +1,36 @@
+# Define the build system configuration.
+[build-system]
+# Specify the packages required for building the project.
+requires = ["hatchling"]
+# Set the build backend to use Hatchling.
+build-backend = "hatchling.build"
+
+[project]
+name = "vis-pyvista"
+description = "vis_pyvista is a library for creating visualizations of robot models using PyVista."
+dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyvista",
+    "trimesh",
+    "pin",
+    "transforms3d",
+    "torch",
+    "numpy",
+    "tqdm",
+]
+
+[tool.hatch.version]
+path = "vis_pyvista/__init__.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["vis_pyvista"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/vis_pyvista",
+]
