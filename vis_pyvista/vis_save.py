@@ -17,13 +17,6 @@ from .utils import (
 )
 from .pin_model import PinRobotModel
 
-
-def convert_to_rel_path(path: str) -> str:
-    if path[0] != "/":
-        return path
-    return f"absolute_path{path}"
-
-
 class Vis:
     def __init__(self, *args, **kwargs):
         pass
@@ -38,16 +31,16 @@ class Vis:
         for lt in lst:
             for o in lt:
                 if not o.get("path") is None:
-                    rel_save_path = convert_to_rel_path(o["path"])
-                    safe_copy(o["path"], os.path.join(dir, rel_save_path))
-                    o["path"] = rel_save_path
+                    save_path = o["path"]
+                    safe_copy(o["path"], os.path.join(dir, save_path))
+                    o["path"] = save_path
                 if not o.get("urdf") is None:
                     urdf_dir = os.path.dirname(o["urdf"])
-                    rel_save_path = os.path.join(o['name'], os.path.basename(o["urdf"]))
+                    save_path = os.path.join(o['name'], os.path.basename(o["urdf"]))
                     safe_copy(
-                        urdf_dir, os.path.join(dir, os.path.dirname(rel_save_path))
+                        urdf_dir, os.path.join(dir, os.path.dirname(save_path))
                     )
-                    o["urdf"] = rel_save_path
+                    o["urdf"] = save_path
         with open(os.path.join(dir, "scene.json"), "w") as f:
             json.dump(serialize_item(lst), f, indent=4)
         print(f"Saved to {dir}")
